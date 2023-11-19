@@ -9,10 +9,11 @@ const dotnev = require("dotenv")
 
 const app = express();
 
+dotnev.config();
+
 // Middleware
 app.use(express.json());
 app.use(cors())
-dotnev.config();
 
 //Database
 Mongodb();
