@@ -1,4 +1,6 @@
 const redis = require('redis');
+const dotnev = require("dotenv")
+dotnev.config();
 
 const redisClient = redis.createClient();
 

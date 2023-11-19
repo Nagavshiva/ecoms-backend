@@ -4,6 +4,7 @@ const usersRoutes = require("./routes/userRoutes");
 const productRoutes = require("./routes/productRoutes");
 const seedRouter = require("./routes/seedRoute");
 const cors = require("cors");
+const dotnev = require("dotenv")
 
 
 const app = express();
@@ -11,7 +12,7 @@ const app = express();
 // Middleware
 app.use(express.json());
 app.use(cors())
-
+dotnev.config();
 
 //Database
 Mongodb();
