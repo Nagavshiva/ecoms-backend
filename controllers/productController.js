@@ -4,26 +4,29 @@ const User = require("../models/userModel")
 // Get all products
 const getAllProducts = async (req, res) => {
     try {
-        // Implement filtering, sorting, and searching logic based on request query parameters
         let query = {};
+        
+        // Search by product name
+        if (req.query.search) {
+            query.name = { $regex: req.query.search, $options: 'i' };
+        }
 
         // Filter by category
         if (req.query.category) {
             query.category = req.query.category;
         }
 
-        // Sort by price
-        let sortOption = { price: 1 }; // 1 for ascending, -1 for descending
-        if (req.query.sortBy === 'price_desc') {
-            sortOption = { price: -1 };
+        // Filter by price range
+        if (req.query.minPrice && req.query.maxPrice) {
+            query.price = { $gte: parseFloat(req.query.minPrice), $lte: parseFloat(req.query.maxPrice) };
+        } else if (req.query.minPrice) {
+            query.price = { $gte: parseFloat(req.query.minPrice) };
+        } else if (req.query.maxPrice) {
+            query.price = { $lte: parseFloat(req.query.maxPrice) };
         }
 
-        // Search by name
-        if (req.query.search) {
-            query.name = { $regex: new RegExp(req.query.search, 'i') };
-        }
-
-        const products = await Product.find(query).sort(sortOption);
+        // Fetch products based on the constructed query
+        const products = await Product.find(query);
 
         res.status(200).json(products);
     } catch (error) {
@@ -31,6 +34,7 @@ const getAllProducts = async (req, res) => {
         res.status(500).json({ message: 'Internal Server Error' });
     }
 }
+
 
 // Get a single product by ID
 const getProductById = async (req, res) => {
@@ -84,7 +88,7 @@ const updateProductById = async (req, res) => {
         if (!updatedProduct) {
             return res.status(404).json({ message: 'Product not found' });
         }
-    // await updatedProduct.save();
+        // await updatedProduct.save();
         res.status(200).json({ message: 'Product updated successfully', updatedProduct });
     } catch (error) {
         console.error(error);
@@ -109,42 +113,42 @@ const deleteProductById = async (req, res) => {
 // createProductReview
 const createProductReview = async (req, res) => {
     try {
-      const { rating, comment,userId, name } = req.body;
-  
-      const product = await Product.findById(req.params.id);
-  
-      const user = await User.findById(userId);
-  
-      if (product) {
-        const alreadyReviewed = product.reviews.find((rev) => rev.user.toString() === user._id.toString());
-  
-        if (alreadyReviewed) {
-          res.status(400);
-          throw new Error('Product already reviewed.');
+        const { rating, comment, userId, name } = req.body;
+
+        const product = await Product.findById(req.params.id);
+
+        const user = await User.findById(userId);
+
+        if (product) {
+            const alreadyReviewed = product.reviews.find((rev) => rev.user.toString() === user._id.toString());
+
+            if (alreadyReviewed) {
+                res.status(400);
+                throw new Error('Product already reviewed.');
+            }
+
+            const review = {
+                rating: Number(rating),
+                comment,
+                name,
+                user: user._id,
+            };
+
+            product.reviews.push(review);
+
+            product.numberOfReviews = product.reviews.length;
+            product.rating = product.reviews.reduce((acc, item) => item.rating + acc, 0) / product.reviews.length;
+            await product.save();
+            res.status(201).json({ message: 'Review has been saved.' });
+        } else {
+            res.status(404);
+            throw new Error('Product not found.');
         }
-  
-        const review = {
-          rating: Number(rating),
-          comment,
-          name,
-          user: user._id,
-        };
-  
-        product.reviews.push(review);
-  
-        product.numberOfReviews = product.reviews.length;
-        product.rating = product.reviews.reduce((acc, item) => item.rating + acc, 0) / product.reviews.length;
-        await product.save();
-        res.status(201).json({ message: 'Review has been saved.' });
-      } else {
-        res.status(404);
-        throw new Error('Product not found.');
-      }
     } catch (error) {
-      res.status(500).json({ message: `Internal Server Error: ${error.message}` });
+        res.status(500).json({ message: `Internal Server Error: ${error.message}` });
     }
-  };
-  
+};
+
 
 
 // removeProductReview
@@ -152,25 +156,25 @@ const removeProductReview = async (req, res) => {
     try {
         const product = await Product.findById(req.params.productId);
 
-  const updatedReviews = product.reviews.filter((rev) => rev._id.valueOf() !== req.params.reviewId);
+        const updatedReviews = product.reviews.filter((rev) => rev._id.valueOf() !== req.params.reviewId);
 
-  if (product) {
-    product.reviews = updatedReviews;
+        if (product) {
+            product.reviews = updatedReviews;
 
-    product.numberOfReviews = product.reviews.length;
+            product.numberOfReviews = product.reviews.length;
 
-    if (product.numberOfReviews > 0) {
-      product.rating = product.reviews.reduce((acc, item) => item.rating + acc, 0) / product.reviews.length;
-    } else {
-      product.rating = 1;
-    }
+            if (product.numberOfReviews > 0) {
+                product.rating = product.reviews.reduce((acc, item) => item.rating + acc, 0) / product.reviews.length;
+            } else {
+                product.rating = 1;
+            }
 
-    await product.save();
-    res.status(201).json({ message: 'Review hass been removed.' });
-  } else {
-    res.status(404);
-    throw new Error('Product not found.');
-  }
+            await product.save();
+            res.status(201).json({ message: 'Review hass been removed.' });
+        } else {
+            res.status(404);
+            throw new Error('Product not found.');
+        }
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal Server Error' });
