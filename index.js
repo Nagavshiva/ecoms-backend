@@ -4,7 +4,7 @@ const usersRoutes = require("./routes/userRoutes");
 const productRoutes = require("./routes/productRoutes");
 const seedRouter = require("./routes/seedRoute");
 const cors = require("cors");
-const dotnev = require("dotenv")
+const dotnev = require("dotenv");
 
 
 const app = express();
